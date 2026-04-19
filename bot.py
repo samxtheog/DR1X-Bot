@@ -27,7 +27,7 @@ _flask_app = Flask(__name__)
 def _home():
     return "Bot is alive!"
 
-Thread(target=lambda: _flask_app.run(host='0.0.0.0', port=8080), daemon=True).start()
+Thread(target=lambda: _flask_app.run(host='0.0.0.0', port=int(os.getenv("PORT", 8080))), daemon=True).start()
 
 # ── Bot setup ──────────────────────────────────────────────────────────────────
 
