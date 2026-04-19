@@ -37,7 +37,13 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="$", intents=intents)
+async def get_prefix(bot, message):
+    staff_role_id = TICKET_STAFF_ROLE_ID
+    if message.guild and any(r.id == staff_role_id for r in getattr(message.author, 'roles', [])):
+        return ["$", ""]
+    return "$"
+
+bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 
 # channel_id -> { opener, added_users, product, budget, claimer }
 ticket_data: dict[int, dict] = {}
@@ -195,7 +201,7 @@ async def _close_ticket(channel: discord.TextChannel, guild: discord.Guild, vouc
             await channel.set_permissions(member, overwrite=None)
 
     # Auto-delete after 10 seconds
-    await asyncio.sleep(10)
+    await asyncio.sleep(5)
     ticket_data.pop(channel.id, None)
     save_ticket_data()
     try:
@@ -459,7 +465,7 @@ async def remove_user(ctx: commands.Context, user: discord.Member):
 
 # ── Prefix: $close ────────────────────────────────────────────────────────────
 
-@bot.command(name="close")
+@bot.command(name="close", aliases=["cl", "Cl"])
 async def close_ticket(ctx: commands.Context):
     if not is_ticket_channel(ctx.channel):
         return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
@@ -474,7 +480,7 @@ async def close_ticket(ctx: commands.Context):
 
 # ── Prefix: $close.v ──────────────────────────────────────────────────────────
 
-@bot.command(name="close.v")
+@bot.command(name="close.v", aliases=["cv", "Cv"])
 async def close_vouch(ctx: commands.Context):
     if not is_ticket_channel(ctx.channel):
         return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
@@ -491,7 +497,7 @@ async def close_vouch(ctx: commands.Context):
     vouch_embed = discord.Embed(
         title="<:blue_crown:1495333511824146495>  DR!X MARKET VOUCH !",
         description=(
-            f"Thank you {opener.mention if opener else 'valued customer'} for your purchase in our server <:heart:1495338641508270110>\n\n"
+            f"Thank you {opener.mention if opener else 'valued customer'} for purchasing **{data.get('product', 'your order')}** in our server <:heart:1495338641508270110>\n\n"
             f"Your support helps **{ctx.guild.name}** grow & we would be pleased to serve you again "
             f"& make sure to recommend our services to your friends too"
         ),
