@@ -263,7 +263,6 @@ class RobuxModal(discord.ui.Modal, title="Robux Order"):
 
 class OtherModal(discord.ui.Modal, title="Product Order"):
     product = discord.ui.TextInput(label="What item do you wanna purchase?", placeholder="Ex: 2 Kitsune, YETI", max_length=100)
-    qty = discord.ui.TextInput(label="Quantity", placeholder="How many?", max_length=10)
     username = discord.ui.TextInput(label="Your Roblox username", placeholder="Optional", required=False, max_length=50)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -273,7 +272,6 @@ class OtherModal(discord.ui.Modal, title="Product Order"):
             product=self.product.value,
             details_desc=(
                 f"**Item**\n```{self.product.value}```\n"
-                f"**Quantity**\n```{self.qty.value}```\n"
                 f"**Roblox Username**\n```{self.username.value or 'Not provided'}```"
             ),
         )
