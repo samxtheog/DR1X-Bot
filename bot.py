@@ -194,6 +194,15 @@ async def _close_ticket(channel: discord.TextChannel, guild: discord.Guild, vouc
         if member:
             await channel.set_permissions(member, overwrite=None)
 
+    # Auto-delete after 10 seconds
+    await asyncio.sleep(10)
+    ticket_data.pop(channel.id, None)
+    save_ticket_data()
+    try:
+        await channel.delete()
+    except Exception:
+        pass
+
 # ── Ticket action buttons (in welcome embed) ───────────────────────────────────
 
 class TicketActionView(discord.ui.View):
@@ -501,8 +510,6 @@ async def close_vouch(ctx: commands.Context):
     ))
 
     content = f"{opener.mention}"
-    await ctx.channel.send(content=content, embed=vouch_embed, view=vouch_view)
-
     await ctx.message.delete()
     await _close_ticket(ctx.channel, ctx.guild, vouch_embed=vouch_embed, vouch_view=vouch_view)
 
