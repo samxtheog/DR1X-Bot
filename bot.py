@@ -1,11 +1,14 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 import os
 import io
 import json
 import asyncio
+import aiohttp
 import chat_exporter
+from flask import Flask
+from threading import Thread
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,6 +17,19 @@ TOKEN = os.getenv("TOKEN")
 TICKET_STAFF_ROLE_ID = int(os.getenv("TICKET_STAFF_ROLE_ID"))
 TICKET_CATEGORY_ID = int(os.getenv("TICKET_CATEGORY_ID"))
 TRANSCRIPT_CHANNEL_ID = int(os.getenv("TRANSCRIPT_CHANNEL_ID"))
+KEEP_ALIVE_URL = os.getenv("KEEP_ALIVE_URL", "http://localhost:8080")
+
+# ── Keep-alive server ──────────────────────────────────────────────────────────
+
+_flask_app = Flask(__name__)
+
+@_flask_app.route('/')
+def _home():
+    return "Bot is alive!"
+
+Thread(target=lambda: _flask_app.run(host='0.0.0.0', port=8080), daemon=True).start()
+
+# ── Bot setup ──────────────────────────────────────────────────────────────────
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -424,12 +440,21 @@ async def close_vouch(ctx: commands.Context):
 
 # ── Bot events ─────────────────────────────────────────────────────────────────
 
+@tasks.loop(minutes=5)
+async def ping_self():
+    try:
+        async with aiohttp.ClientSession() as session:
+            await session.get(KEEP_ALIVE_URL)
+    except Exception:
+        pass
+
 @bot.event
 async def on_ready():
     load_ticket_data()
     bot.add_view(TicketPanelView())
     bot.add_view(TicketControlView())
     await bot.tree.sync()
+    ping_self.start()
     print(f"Logged in as {bot.user} | Synced slash commands")
 
 bot.run(TOKEN)
