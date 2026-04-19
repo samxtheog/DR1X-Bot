@@ -15,7 +15,8 @@ load_dotenv()
 
 TOKEN = os.getenv("TOKEN")
 TICKET_STAFF_ROLE_ID = int(os.getenv("TICKET_STAFF_ROLE_ID"))
-TICKET_CATEGORY_ID = int(os.getenv("TICKET_CATEGORY_ID"))
+ROBUX_CATEGORY_ID = int(os.getenv("ROBUX_CATEGORY_ID"))
+OTHER_CATEGORY_ID = int(os.getenv("OTHER_CATEGORY_ID"))
 TRANSCRIPT_CHANNEL_ID = int(os.getenv("TRANSCRIPT_CHANNEL_ID"))
 KEEP_ALIVE_URL = os.getenv("KEEP_ALIVE_URL", "http://localhost:8080")
 
@@ -193,70 +194,136 @@ async def _close_ticket(channel: discord.TextChannel, guild: discord.Guild, vouc
         if member:
             await channel.set_permissions(member, overwrite=None)
 
-# ── Modal ──────────────────────────────────────────────────────────────────────
+# ── Ticket action buttons (in welcome embed) ───────────────────────────────────
 
-class PurchaseModal(discord.ui.Modal, title="Purchase Request"):
+class TicketActionView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Claim", emoji="<:blue_crown:1495333511824146495>", style=discord.ButtonStyle.blurple, custom_id="ticket_action_claim")
+    async def claim_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
+        if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
+            return await interaction.response.send_message("<:wrong:1495334749663793213> Only ticket support staff can claim tickets.", ephemeral=True)
+
+        data = ticket_data.setdefault(interaction.channel.id, {})
+        if data.get("claimer"):
+            claimer = interaction.guild.get_member(data["claimer"])
+            return await interaction.response.send_message(f"<:wrong:1495334749663793213> Already claimed by {claimer.mention if claimer else 'someone'}.", ephemeral=True)
+
+        data["claimer"] = interaction.user.id
+        save_ticket_data()
+
+        embed = discord.Embed(
+            title="<:blue_crown:1495333511824146495> Ticket Claimed",
+            description="This ticket has been claimed and is now being handled.",
+            color=0x3498db,
+        )
+        embed.add_field(name="<:bluenewDiscordUser:1495325749597704295> Staff Member", value=interaction.user.mention, inline=True)
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        embed.set_footer(text=f"Claimed by {interaction.user} • {interaction.user.id}")
+        await interaction.response.send_message(embed=embed)
+
+    @discord.ui.button(label="Close", emoji="<:blue_gem_lock:1495332626767286364>", style=discord.ButtonStyle.red, custom_id="ticket_action_close")
+    async def close_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
+        if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
+            return await interaction.response.send_message("<:wrong:1495334749663793213> Only staff can close tickets.", ephemeral=True)
+        if interaction.channel.name.startswith("closed-"):
+            return await interaction.response.send_message("<:wrong:1495334749663793213> Already closed.", ephemeral=True)
+
+        await interaction.response.send_message("<:blue_gem_lock:1495332626767286364> Closing ticket...", ephemeral=True)
+        await _close_ticket(interaction.channel, interaction.guild)
+
+# ── Modals ─────────────────────────────────────────────────────────────────────
+
+class RobuxModal(discord.ui.Modal, title="Robux Order"):
+    item = discord.ui.TextInput(label="What item do you want to buy?", placeholder="e.g. 1000 Robux, gamepass name...", max_length=100)
+    username = discord.ui.TextInput(label="Your Roblox username", placeholder="Optional", required=False, max_length=50)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await _create_ticket(
+            interaction,
+            category_id=ROBUX_CATEGORY_ID,
+            product=self.item.value,
+            details_desc=(
+                f"**Item**\n```{self.item.value}```\n"
+                f"**Roblox Username**\n```{self.username.value or 'Not provided'}```"
+            ),
+        )
+
+class OtherModal(discord.ui.Modal, title="Product Order"):
     product = discord.ui.TextInput(label="Product", placeholder="What would you like to purchase?", max_length=100)
     qty = discord.ui.TextInput(label="Quantity", placeholder="How many?", max_length=10)
 
     async def on_submit(self, interaction: discord.Interaction):
-        guild = interaction.guild
-        staff_role = guild.get_role(TICKET_STAFF_ROLE_ID)
-        category = guild.get_channel(TICKET_CATEGORY_ID)
-
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-        }
-        if staff_role:
-            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
-
-        ticket_channel = await guild.create_text_channel(
-            name=f"ticket-{interaction.user.name}",
-            category=category,
-            overwrites=overwrites,
+        await _create_ticket(
+            interaction,
+            category_id=OTHER_CATEGORY_ID,
+            product=self.product.value,
+            details_desc=(
+                f"**Product**\n```{self.product.value}```\n"
+                f"**Quantity**\n```{self.qty.value}```"
+            ),
         )
 
-        ticket_data[ticket_channel.id] = {
-            "opener": interaction.user.id,
-            "added_users": set(),
-            "product": self.product.value,
-            "claimer": None,
-        }
-        save_ticket_data()
+async def _create_ticket(interaction: discord.Interaction, category_id: int, product: str, details_desc: str):
+    guild = interaction.guild
+    staff_role = guild.get_role(TICKET_STAFF_ROLE_ID)
+    category = guild.get_channel(category_id)
 
-        welcome_embed = discord.Embed(
-            title="<:ticket_premium:1495328766170235030> Ticket Opened",
-            description=f"Hey {interaction.user.mention}, thanks for reaching out!\nA staff member will be with you shortly.\n\n",
-            color=0x3498db,
-        )
-        welcome_embed.set_thumbnail(url=bot.user.display_avatar.url)
-        welcome_embed.set_footer(text=f"Ticket by {interaction.user} • {interaction.user.id}")
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+    }
+    if staff_role:
+        overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
-        details_embed = discord.Embed(title="<:product:1495325856854179922> Order Details", color=0x3498db)
-        details_embed.description = (
-            f"**Product**\n```{self.product.value}```\n"
-            f"**Quantity**\n```{self.qty.value}```"
-        )
+    ticket_channel = await guild.create_text_channel(
+        name=f"ticket-{interaction.user.name}",
+        category=category,
+        overwrites=overwrites,
+    )
 
-        mentions = f"{interaction.user.mention} {staff_role.mention if staff_role else ''}"
-        await ticket_channel.send(mentions, embeds=[welcome_embed, details_embed])
-        await interaction.response.send_message(f"<:blue_tick:1495334689983037504> Your ticket has been created: {ticket_channel.mention}", ephemeral=True)
+    ticket_data[ticket_channel.id] = {
+        "opener": interaction.user.id,
+        "added_users": set(),
+        "product": product,
+        "claimer": None,
+    }
+    save_ticket_data()
+
+    welcome_embed = discord.Embed(
+        title="<:ticket_premium:1495328766170235030> Ticket Opened",
+        description=f"Hey {interaction.user.mention}, thanks for reaching out!\nA staff member will be with you shortly.\n\n",
+        color=0x3498db,
+    )
+    welcome_embed.set_thumbnail(url=bot.user.display_avatar.url)
+    welcome_embed.set_footer(text=f"Ticket by {interaction.user} • {interaction.user.id}")
+
+    details_embed = discord.Embed(title="<:product:1495325856854179922> Order Details", color=0x3498db)
+    details_embed.description = details_desc
+
+    mentions = f"{interaction.user.mention} {staff_role.mention if staff_role else ''}"
+    await ticket_channel.send(mentions, embeds=[welcome_embed, details_embed], view=TicketActionView())
+    await interaction.response.send_message(f"<:blue_tick:1495334689983037504> Your ticket has been created: {ticket_channel.mention}", ephemeral=True)
 
 # ── Dropdown ───────────────────────────────────────────────────────────────────
 
 class TicketDropdown(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Purchase Now", description="Open a purchase request ticket", emoji="<:_cart:1495325346218901574>", value="purchase"),
+            discord.SelectOption(label="Robux Order", description="Purchase Robux or Roblox items", emoji="<:ROBLOX:1495353184573718599>", value="robux"),
+            discord.SelectOption(label="Other Product", description="Purchase any other product", emoji="<:_cart:1495325346218901574>", value="other"),
         ]
-        super().__init__(placeholder="Select an option...", min_values=1, max_values=1, options=options, custom_id="ticket_panel_dropdown")
+        super().__init__(placeholder="Click here to Purchase..", min_values=1, max_values=1, options=options, custom_id="ticket_panel_dropdown")
 
     async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == "purchase":
-            await interaction.response.send_modal(PurchaseModal())
-            await interaction.message.edit(view=TicketPanelView())
-
+        if self.values[0] == "robux":
+            await interaction.response.send_modal(RobuxModal())
+        elif self.values[0] == "other":
+            await interaction.response.send_modal(OtherModal())
+        await interaction.message.edit(view=TicketPanelView())
 class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -275,7 +342,8 @@ async def ticket_panel(interaction: discord.Interaction):
     embed.set_thumbnail(url=bot.user.display_avatar.url)
     embed.set_image(url="attachment://banner.png")
     embed.set_footer(text="We'll get back to you as soon as possible.")
-    await interaction.response.send_message(embed=embed, view=TicketPanelView(), file=discord.File("banner.png"))
+    await interaction.response.send_message("✅ Panel sent!", ephemeral=True)
+    await interaction.channel.send(embed=embed, view=TicketPanelView(), file=discord.File("banner.png"))
 
 @ticket_panel.error
 async def ticket_panel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
@@ -453,6 +521,7 @@ async def on_ready():
     load_ticket_data()
     bot.add_view(TicketPanelView())
     bot.add_view(TicketControlView())
+    bot.add_view(TicketActionView())
     await bot.tree.sync()
     ping_self.start()
     print(f"Logged in as {bot.user} | Synced slash commands")
