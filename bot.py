@@ -357,9 +357,10 @@ async def ticket_panel(interaction: discord.Interaction):
             " ###  <:YES:1495448593312780310> Professional • Efficient • Secure trading  **"
         ),
     )
-    embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1491376295391531101/1495355732063817809/static.png?ex=69e69acc&is=69e5494c&hm=00a273094ef905bbd6ba6d22b93f96749e35f65172ccffaa51b57bc6510eed0a")
+    embed.set_thumbnail(url=bot.user.display_avatar.url)
+    embed.set_image(url="attachment://banner.png")
     await interaction.response.send_message("✅ Panel sent!", ephemeral=True)
-    await interaction.channel.send(embed=embed, view=TicketPanelView())
+    await interaction.channel.send(embed=embed, view=TicketPanelView(), file=discord.File("banner.png"))
 
 @ticket_panel.error
 async def ticket_panel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
