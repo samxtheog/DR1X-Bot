@@ -350,15 +350,16 @@ class TicketPanelView(discord.ui.View):
 @app_commands.checks.has_permissions(administrator=True)
 async def ticket_panel(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="<:_cart:1495325346218901574> DR!X MARKET",
-        description="Need help or want to place an order?\nSelect an option from the dropdown below to open a ticket.",
-        color=0x3498db,
+        description=(
+            "# DR!X MARKET <a:HEHE:1495448735126126663>\n"
+            "** ### <:good:1495673281892716645> Begin by submitting your item name in the order channel.\n"
+            "### <:OK:1492771833156604045> Our staff will assist you as soon as possible.\n"
+            " ###  <:YES:1495448593312780310> Professional • Efficient • Secure trading  **"
+        ),
     )
-    embed.set_thumbnail(url=bot.user.display_avatar.url)
-    embed.set_image(url="attachment://banner.png")
-    embed.set_footer(text="We'll get back to you as soon as possible.")
+    embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1491376295391531101/1495355732063817809/static.png?ex=69e69acc&is=69e5494c&hm=00a273094ef905bbd6ba6d22b93f96749e35f65172ccffaa51b57bc6510eed0a")
     await interaction.response.send_message("✅ Panel sent!", ephemeral=True)
-    await interaction.channel.send(embed=embed, view=TicketPanelView(), file=discord.File("banner.png"))
+    await interaction.channel.send(embed=embed, view=TicketPanelView())
 
 @ticket_panel.error
 async def ticket_panel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
