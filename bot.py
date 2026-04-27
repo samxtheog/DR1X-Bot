@@ -252,28 +252,95 @@ class TicketActionView(discord.ui.View):
 
 # ── Modals ─────────────────────────────────────────────────────────────────────
 
+# ── Robux flow: Modal → Type select → Payment select → ticket created ──────────
+
+class RobuxModal(discord.ui.Modal, title="Robux Order"):
+    item = discord.ui.TextInput(label="Item / Amount of Robux", placeholder="Ex: 1000 Robux", max_length=100)
+    username = discord.ui.TextInput(label="Roblox Username", placeholder="Optional", required=False, max_length=50)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # After modal submit → send ephemeral embed with Robux type dropdown
+        embed = discord.Embed(
+            title="<:samx_ROBLOX:1497644702504321225> Robux Order",
+            description="What type of Robux is it?",
+            color=0x3498db,
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=RobuxTypeView(self.item.value, self.username.value or "Not provided"),
+            ephemeral=True,
+        )
+
+
+class RobuxTypeSelect(discord.ui.Select):
+    def __init__(self, item: str, username: str):
+        self.item = item
+        self.username = username
+        options = [
+            discord.SelectOption(label="Group Payout", emoji="<:samx_group:1498268791602151504>", value="group_payout"),
+            discord.SelectOption(label="InGame Gifting", emoji="<:samx_roblox:1498268879200194600>", value="ingame_gifting"),
+        ]
+        super().__init__(placeholder="What type of Robux is it?", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        robux_type = "Group Payout" if self.values[0] == "group_payout" else "InGame Gifting"
+        embed = discord.Embed(
+            title="<:samx_ROBLOX:1497644702504321225> Select Payment Method",
+            description="Select your preferred payment method below.",
+            color=0x3498db,
+        )
+        await interaction.response.edit_message(
+            embed=embed,
+            view=RobuxPaymentView(robux_type, self.item, self.username),
+        )
+
+
+class RobuxTypeView(discord.ui.View):
+    def __init__(self, item: str, username: str):
+        super().__init__(timeout=120)
+        self.add_item(RobuxTypeSelect(item, username))
+
+
 class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
     method = discord.ui.TextInput(label="Payment Method", placeholder="PayPal / Crypto", max_length=50)
 
-    def __init__(self, robux_type: str):
+    def __init__(self, robux_type: str, item: str, username: str, original_interaction: discord.Interaction):
         super().__init__()
         self.robux_type = robux_type
+        self.item = item
+        self.username = username
+        self.original_interaction = original_interaction
 
     async def on_submit(self, interaction: discord.Interaction):
-        await _create_ticket(
+        ticket_channel = await _create_ticket_channel(
             interaction,
             category_id=ROBUX_CATEGORY_ID,
-            product=f"Robux ({self.robux_type})",
+            product=f"Robux - {self.robux_type}",
             details_desc=(
+                f"**Item**\n```{self.item}```\n"
+                f"**Roblox Username**\n```{self.username}```\n"
                 f"**Robux Type**\n```{self.robux_type}```\n"
                 f"**Payment Method**\n```{self.method.value}```"
             ),
         )
+        done_embed = discord.Embed(
+            title="<:samx_tick:1497645191463440605> Ticket Created",
+            description=f"Your ticket has been created: {ticket_channel.mention}",
+            color=0x2ecc71,
+        )
+        await interaction.response.send_message(embed=done_embed, ephemeral=True)
+        # Edit the original ephemeral message to show ticket created
+        try:
+            await self.original_interaction.edit_original_response(embed=done_embed, view=None)
+        except Exception:
+            pass
 
 
 class RobuxPaymentSelect(discord.ui.Select):
-    def __init__(self, robux_type: str):
+    def __init__(self, robux_type: str, item: str, username: str):
         self.robux_type = robux_type
+        self.item = item
+        self.username = username
         options = [
             discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
             discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
@@ -283,69 +350,35 @@ class RobuxPaymentSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "other":
-            await interaction.response.send_modal(RobuxOtherPaymentModal(self.robux_type))
-        else:
-            await interaction.response.defer()
-            await _create_robux_ticket(interaction, self.robux_type, self.values[0].capitalize())
+            await interaction.response.send_modal(
+                RobuxOtherPaymentModal(self.robux_type, self.item, self.username, interaction)
+            )
+            return
+
+        payment = self.values[0].capitalize()
+        ticket_channel = await _create_ticket_channel(
+            interaction,
+            category_id=ROBUX_CATEGORY_ID,
+            product=f"Robux - {self.robux_type}",
+            details_desc=(
+                f"**Item**\n```{self.item}```\n"
+                f"**Roblox Username**\n```{self.username}```\n"
+                f"**Robux Type**\n```{self.robux_type}```\n"
+                f"**Payment Method**\n```{payment}```"
+            ),
+        )
+        done_embed = discord.Embed(
+            title="<:samx_tick:1497645191463440605> Ticket Created",
+            description=f"Your ticket has been created: {ticket_channel.mention}",
+            color=0x2ecc71,
+        )
+        await interaction.response.edit_message(embed=done_embed, view=None)
 
 
 class RobuxPaymentView(discord.ui.View):
-    def __init__(self, robux_type: str):
+    def __init__(self, robux_type: str, item: str, username: str):
         super().__init__(timeout=120)
-        self.add_item(RobuxPaymentSelect(robux_type))
-
-
-class RobuxTypeSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="Group Payout", emoji="<:samx_group:1498268791602151504>", value="group_payout"),
-            discord.SelectOption(label="InGame Gifting", emoji="<:samx_roblox:1498268879200194600>", value="ingame_gifting"),
-        ]
-        super().__init__(placeholder="What type of Robux is it?", min_values=1, max_values=1, options=options)
-
-    async def callback(self, interaction: discord.Interaction):
-        robux_type = "Group Payout" if self.values[0] == "group_payout" else "InGame Gifting"
-        payment_embed = discord.Embed(
-            title="<:samx_ROBLOX:1497644702504321225> Select Payment Method",
-            description="Select your preferred payment method below.",
-            color=0x3498db,
-        )
-        await interaction.response.edit_message(embed=payment_embed, view=RobuxPaymentView(robux_type))
-
-
-class RobuxTypeView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=120)
-        self.add_item(RobuxTypeSelect())
-
-
-async def _create_robux_ticket(interaction: discord.Interaction, robux_type: str, payment_method: str):
-    await _create_ticket(
-        interaction,
-        category_id=ROBUX_CATEGORY_ID,
-        product=f"Robux ({robux_type})",
-        details_desc=(
-            f"**Robux Type**\n```{robux_type}```\n"
-            f"**Payment Method**\n```{payment_method}```"
-        ),
-        deferred=True,
-    )
-
-
-class RobuxModal(discord.ui.Modal, title="Robux Order"):
-    item = discord.ui.TextInput(label="What item do you want to buy?", placeholder="Ex: 1000 Robux", max_length=100)
-    username = discord.ui.TextInput(label="Your Roblox username", placeholder="Optional", required=False, max_length=50)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await _create_ticket(
-            interaction,
-            category_id=ROBUX_CATEGORY_ID,
-            product=self.item.value,
-            details_desc=(
-                f"**Item**\n```{self.item.value}```\n"
-                f"**Roblox Username**\n```{self.username.value or 'Not provided'}```"
-            ),
-        )
+        self.add_item(RobuxPaymentSelect(robux_type, item, username))
 
 class OtherModal(discord.ui.Modal, title="Product Order"):
     product = discord.ui.TextInput(label="What item do you wanna purchase?", placeholder="Ex: 2 Kitsune, YETI", max_length=100)
@@ -362,7 +395,7 @@ class OtherModal(discord.ui.Modal, title="Product Order"):
             ),
         )
 
-async def _create_ticket(interaction: discord.Interaction, category_id: int, product: str, details_desc: str, deferred: bool = False):
+async def _create_ticket_channel(interaction: discord.Interaction, category_id: int, product: str, details_desc: str) -> discord.TextChannel:
     guild = interaction.guild
     staff_role = guild.get_role(TICKET_STAFF_ROLE_ID)
     category = guild.get_channel(category_id)
@@ -401,6 +434,11 @@ async def _create_ticket(interaction: discord.Interaction, category_id: int, pro
 
     mentions = f"{interaction.user.mention} {staff_role.mention if staff_role else ''}"
     await ticket_channel.send(mentions, embeds=[welcome_embed, details_embed], view=TicketActionView())
+    return ticket_channel
+
+
+async def _create_ticket(interaction: discord.Interaction, category_id: int, product: str, details_desc: str, deferred: bool = False):
+    ticket_channel = await _create_ticket_channel(interaction, category_id, product, details_desc)
     msg = f"<:samx_tick:1497645191463440605> Your ticket has been created: {ticket_channel.mention}"
     if deferred:
         await interaction.followup.send(msg, ephemeral=True)
