@@ -215,6 +215,17 @@ class TicketActionView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
+    @discord.ui.button(label="Close", emoji="<:samx_blue_gem_lock:1497645047951397085>", style=discord.ButtonStyle.red, custom_id="ticket_action_close")
+    async def close_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
+        if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
+            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Only staff can close tickets.", ephemeral=True)
+        if interaction.channel.name.startswith("closed-"):
+            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Already closed.", ephemeral=True)
+
+        await interaction.response.send_message("<:samx_blue_gem_lock:1497645047951397085> Closing ticket...", ephemeral=True)
+        await _close_ticket(interaction.channel, interaction.guild)
+
     @discord.ui.button(label="Claim", emoji="<:samx_crown:1497645120848396519>", style=discord.ButtonStyle.blurple, custom_id="ticket_action_claim")
     async def claim_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
@@ -239,16 +250,6 @@ class TicketActionView(discord.ui.View):
         embed.set_footer(text=f"Claimed by {interaction.user} • {interaction.user.id}")
         await interaction.response.send_message(embed=embed)
 
-    @discord.ui.button(label="Close", emoji="<:samx_blue_gem_lock:1497645047951397085>", style=discord.ButtonStyle.red, custom_id="ticket_action_close")
-    async def close_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
-        if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Only staff can close tickets.", ephemeral=True)
-        if interaction.channel.name.startswith("closed-"):
-            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Already closed.", ephemeral=True)
-
-        await interaction.response.send_message("<:samx_blue_gem_lock:1497645047951397085> Closing ticket...", ephemeral=True)
-        await _close_ticket(interaction.channel, interaction.guild)
 
 # ── Modals ─────────────────────────────────────────────────────────────────────
 
