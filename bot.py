@@ -110,7 +110,7 @@ class TicketControlView(discord.ui.View):
         asyncio.create_task(_try_reopen_rename())
         
         reopen_embed = discord.Embed(
-            title="<:blue_crown:1495333511824146495> Ticket Reopened",
+            title="<:samx_crown:1497645120848396519> Ticket Reopened",
             description="This ticket has been reopened.",
             color=0x3498db,
         )
@@ -118,7 +118,7 @@ class TicketControlView(discord.ui.View):
         reopen_embed.set_thumbnail(url=interaction.user.display_avatar.url)
         reopen_embed.set_footer(text=f"Reopened by {interaction.user} • {interaction.user.id}")
         await channel.send(embed=reopen_embed)
-        await interaction.response.send_message("<:blue_tick:1495334689983037504> Ticket reopened.", ephemeral=True)
+        await interaction.response.send_message("<:samx_tick:1497645191463440605> Ticket reopened.", ephemeral=True)
 
     @discord.ui.button(label="Delete", style=discord.ButtonStyle.red, custom_id="ticket_delete")
     async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -126,9 +126,9 @@ class TicketControlView(discord.ui.View):
         staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
 
         if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("<:wrong:1495334749663793213> Only staff can delete tickets.", ephemeral=True)
+            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Only staff can delete tickets.", ephemeral=True)
 
-        await interaction.response.send_message("<:uo_delete:1495332907705696288> Deleting ticket...", ephemeral=True)
+        await interaction.response.send_message("<:samx_delete:1497645076384583811> Deleting ticket...", ephemeral=True)
 
         if not channel.name.startswith("closed-"):
             await _close_ticket(channel, interaction.guild)
@@ -150,7 +150,7 @@ async def _close_ticket(channel: discord.TextChannel, guild: discord.Guild, vouc
     transcript_channel = guild.get_channel(TRANSCRIPT_CHANNEL_ID)
 
     # Build transcript embed
-    t_embed = discord.Embed(title="<:transcript:1495333721706987622> Transcript", color=0x3498db)
+    t_embed = discord.Embed(title="<:samx_transcript:1497645146043318424> Transcript", color=0x3498db)
     t_embed.add_field(name="Channel", value=f"`{channel.name}`", inline=False)
     t_embed.add_field(name="Product", value=f"```{product}```", inline=False)
     t_embed.add_field(name="Buyer", value=opener.mention if opener else f"<@{opener_id}>", inline=True)
@@ -165,7 +165,7 @@ async def _close_ticket(channel: discord.TextChannel, guild: discord.Guild, vouc
         transcript_file2 = await generate_transcript(channel)
         try:
             dm_embed = discord.Embed(
-                title="<:transcript:1495333721706987622> Your Ticket Transcript",
+                title="<:samx_transcript:1497645146043318424> Your Ticket Transcript",
                 description=f"Your ticket `{channel.name}` has been closed.",
                 color=0x3498db,
             )
@@ -186,7 +186,7 @@ async def _close_ticket(channel: discord.TextChannel, guild: discord.Guild, vouc
     asyncio.create_task(_try_rename())
 
     close_embed = discord.Embed(
-        title="<:blue_gem_lock:1495332626767286364> Ticket Closed",
+        title="<:samx_blue_gem_lock:1497645047951397085> Ticket Closed",
         description="This ticket has been closed. Staff can reopen or delete it below.",
         color=0x3498db,
     )
@@ -215,42 +215,122 @@ class TicketActionView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Claim", emoji="<:blue_crown:1495333511824146495>", style=discord.ButtonStyle.blurple, custom_id="ticket_action_claim")
+    @discord.ui.button(label="Claim", emoji="<:samx_crown:1497645120848396519>", style=discord.ButtonStyle.blurple, custom_id="ticket_action_claim")
     async def claim_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
         if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("<:wrong:1495334749663793213> Only ticket support staff can claim tickets.", ephemeral=True)
+            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Only ticket support staff can claim tickets.", ephemeral=True)
 
         data = ticket_data.setdefault(interaction.channel.id, {})
         if data.get("claimer"):
             claimer = interaction.guild.get_member(data["claimer"])
-            return await interaction.response.send_message(f"<:wrong:1495334749663793213> Already claimed by {claimer.mention if claimer else 'someone'}.", ephemeral=True)
+            return await interaction.response.send_message(f"<:samx_wrong:1497645159037276171> Already claimed by {claimer.mention if claimer else 'someone'}.", ephemeral=True)
 
         data["claimer"] = interaction.user.id
         save_ticket_data()
 
         embed = discord.Embed(
-            title="<:blue_crown:1495333511824146495> Ticket Claimed",
+            title="<:samx_crown:1497645120848396519> Ticket Claimed",
             description="This ticket has been claimed and is now being handled.",
             color=0x3498db,
         )
-        embed.add_field(name="<:bluenewDiscordUser:1495325749597704295> Staff Member", value=interaction.user.mention, inline=True)
+        embed.add_field(name="<:samx_dcuser:1497644961858977912> Staff Member", value=interaction.user.mention, inline=True)
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.set_footer(text=f"Claimed by {interaction.user} • {interaction.user.id}")
         await interaction.response.send_message(embed=embed)
 
-    @discord.ui.button(label="Close", emoji="<:blue_gem_lock:1495332626767286364>", style=discord.ButtonStyle.red, custom_id="ticket_action_close")
+    @discord.ui.button(label="Close", emoji="<:samx_blue_gem_lock:1497645047951397085>", style=discord.ButtonStyle.red, custom_id="ticket_action_close")
     async def close_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         staff_role = interaction.guild.get_role(TICKET_STAFF_ROLE_ID)
         if staff_role not in interaction.user.roles and not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("<:wrong:1495334749663793213> Only staff can close tickets.", ephemeral=True)
+            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Only staff can close tickets.", ephemeral=True)
         if interaction.channel.name.startswith("closed-"):
-            return await interaction.response.send_message("<:wrong:1495334749663793213> Already closed.", ephemeral=True)
+            return await interaction.response.send_message("<:samx_wrong:1497645159037276171> Already closed.", ephemeral=True)
 
-        await interaction.response.send_message("<:blue_gem_lock:1495332626767286364> Closing ticket...", ephemeral=True)
+        await interaction.response.send_message("<:samx_blue_gem_lock:1497645047951397085> Closing ticket...", ephemeral=True)
         await _close_ticket(interaction.channel, interaction.guild)
 
 # ── Modals ─────────────────────────────────────────────────────────────────────
+
+class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
+    method = discord.ui.TextInput(label="Payment Method", placeholder="PayPal / Crypto", max_length=50)
+
+    def __init__(self, robux_type: str):
+        super().__init__()
+        self.robux_type = robux_type
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await _create_ticket(
+            interaction,
+            category_id=ROBUX_CATEGORY_ID,
+            product=f"Robux ({self.robux_type})",
+            details_desc=(
+                f"**Robux Type**\n```{self.robux_type}```\n"
+                f"**Payment Method**\n```{self.method.value}```"
+            ),
+        )
+
+
+class RobuxPaymentSelect(discord.ui.Select):
+    def __init__(self, robux_type: str):
+        self.robux_type = robux_type
+        options = [
+            discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
+            discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
+            discord.SelectOption(label="Other", emoji="<:samx_Paypal:1498268421463474278>", value="other"),
+        ]
+        super().__init__(placeholder="Select your preferred payment method", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.values[0] == "other":
+            await interaction.response.send_modal(RobuxOtherPaymentModal(self.robux_type))
+        else:
+            await interaction.response.defer()
+            await _create_robux_ticket(interaction, self.robux_type, self.values[0].capitalize())
+
+
+class RobuxPaymentView(discord.ui.View):
+    def __init__(self, robux_type: str):
+        super().__init__(timeout=120)
+        self.add_item(RobuxPaymentSelect(robux_type))
+
+
+class RobuxTypeSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Group Payout", emoji="<:samx_group:1498268791602151504>", value="group_payout"),
+            discord.SelectOption(label="InGame Gifting", emoji="<:samx_roblox:1498268879200194600>", value="ingame_gifting"),
+        ]
+        super().__init__(placeholder="What type of Robux is it?", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        robux_type = "Group Payout" if self.values[0] == "group_payout" else "InGame Gifting"
+        payment_embed = discord.Embed(
+            title="<:samx_ROBLOX:1497644702504321225> Select Payment Method",
+            description="Select your preferred payment method below.",
+            color=0x3498db,
+        )
+        await interaction.response.edit_message(embed=payment_embed, view=RobuxPaymentView(robux_type))
+
+
+class RobuxTypeView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=120)
+        self.add_item(RobuxTypeSelect())
+
+
+async def _create_robux_ticket(interaction: discord.Interaction, robux_type: str, payment_method: str):
+    await _create_ticket(
+        interaction,
+        category_id=ROBUX_CATEGORY_ID,
+        product=f"Robux ({robux_type})",
+        details_desc=(
+            f"**Robux Type**\n```{robux_type}```\n"
+            f"**Payment Method**\n```{payment_method}```"
+        ),
+        deferred=True,
+    )
+
 
 class RobuxModal(discord.ui.Modal, title="Robux Order"):
     item = discord.ui.TextInput(label="What item do you want to buy?", placeholder="Ex: 1000 Robux", max_length=100)
@@ -282,7 +362,7 @@ class OtherModal(discord.ui.Modal, title="Product Order"):
             ),
         )
 
-async def _create_ticket(interaction: discord.Interaction, category_id: int, product: str, details_desc: str):
+async def _create_ticket(interaction: discord.Interaction, category_id: int, product: str, details_desc: str, deferred: bool = False):
     guild = interaction.guild
     staff_role = guild.get_role(TICKET_STAFF_ROLE_ID)
     category = guild.get_channel(category_id)
@@ -309,36 +389,46 @@ async def _create_ticket(interaction: discord.Interaction, category_id: int, pro
     save_ticket_data()
 
     welcome_embed = discord.Embed(
-        title="<:ticket_premium:1495328766170235030> Ticket Opened",
+        title="<:samx_ticket_premium:1497645031836876982> Ticket Opened",
         description=f"Hey {interaction.user.mention}, thanks for reaching out!\nA staff member will be with you shortly.\n\n",
         color=0x3498db,
     )
     welcome_embed.set_thumbnail(url=bot.user.display_avatar.url)
     welcome_embed.set_footer(text=f"Ticket by {interaction.user} • {interaction.user.id}")
 
-    details_embed = discord.Embed(title="<:product:1495325856854179922> Order Details", color=0x3498db)
+    details_embed = discord.Embed(title="<:samx_product:1497644984894226563> Order Details", color=0x3498db)
     details_embed.description = details_desc
 
     mentions = f"{interaction.user.mention} {staff_role.mention if staff_role else ''}"
     await ticket_channel.send(mentions, embeds=[welcome_embed, details_embed], view=TicketActionView())
-    await interaction.response.send_message(f"<:blue_tick:1495334689983037504> Your ticket has been created: {ticket_channel.mention}", ephemeral=True)
+    msg = f"<:samx_tick:1497645191463440605> Your ticket has been created: {ticket_channel.mention}"
+    if deferred:
+        await interaction.followup.send(msg, ephemeral=True)
+    else:
+        await interaction.response.send_message(msg, ephemeral=True)
 
 # ── Dropdown ───────────────────────────────────────────────────────────────────
 
 class TicketDropdown(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Robux Order", description="Purchase Robux or Roblox items", emoji="<:ROBLOX:1495353184573718599>", value="robux"),
-            discord.SelectOption(label="Other Product", description="Purchase any other product", emoji="<:_cart:1495325346218901574>", value="other"),
+            discord.SelectOption(label="Robux Order", description="Purchase Robux or Roblox items", emoji="<:samx_ROBLOX:1497644702504321225>", value="robux"),
+            discord.SelectOption(label="Other Product", description="Purchase any other product", emoji="<:samx_cart:1497644780539220018>", value="other"),
         ]
         super().__init__(placeholder="Click here to Purchase..", min_values=1, max_values=1, options=options, custom_id="ticket_panel_dropdown")
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "robux":
-            await interaction.response.send_modal(RobuxModal())
+            robux_type_embed = discord.Embed(
+                title="<:samx_ROBLOX:1497644702504321225> Robux Order",
+                description="What type of Robux is it?",
+                color=0x3498db,
+            )
+            await interaction.response.send_message(embed=robux_type_embed, view=RobuxTypeView(), ephemeral=True)
+            await interaction.message.edit(view=TicketPanelView())
         elif self.values[0] == "other":
             await interaction.response.send_modal(OtherModal())
-        await interaction.message.edit(view=TicketPanelView())
+            await interaction.message.edit(view=TicketPanelView())
 class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -357,41 +447,41 @@ async def ticket_panel(interaction: discord.Interaction):
             " ###  <:YES:1495448593312780310> Professional • Efficient • Secure trading  **"
         ),
     )
-    embed.set_thumbnail(url=bot.user.display_avatar.url)
+
     embed.set_image(url="attachment://banner.png")
-    await interaction.response.send_message("✅ Panel sent!", ephemeral=True)
+    await interaction.response.send_message("<:samx_tick:1497645191463440605> Panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=TicketPanelView(), file=discord.File("banner.png"))
 
 @ticket_panel.error
 async def ticket_panel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.MissingPermissions):
-        await interaction.response.send_message("<:wrong:1495334749663793213> You need Administrator permissions.", ephemeral=True)
+        await interaction.response.send_message("<:samx_wrong:1497645159037276171> You need Administrator permissions.", ephemeral=True)
 
 # ── Prefix: $claim ────────────────────────────────────────────────────────────
 
 @bot.command(name="claim")
 async def claim_ticket(ctx: commands.Context):
     if not is_ticket_channel(ctx.channel):
-        return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This is not a ticket channel.")
     staff_role = ctx.guild.get_role(TICKET_STAFF_ROLE_ID)
     if staff_role not in ctx.author.roles and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("<:wrong:1495334749663793213> Only ticket support staff can claim tickets.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Only ticket support staff can claim tickets.")
 
     data = ticket_data.setdefault(ctx.channel.id, {})
     if data.get("claimer"):
         claimer = ctx.guild.get_member(data["claimer"])
-        return await ctx.send(f"<:wrong:1495334749663793213> Already claimed by {claimer.mention if claimer else 'someone'}.")
+        return await ctx.send(f"<:samx_wrong:1497645159037276171> Already claimed by {claimer.mention if claimer else 'someone'}.")
 
     data["claimer"] = ctx.author.id
     save_ticket_data()
     await ctx.message.delete()
 
     embed = discord.Embed(
-        title="<:blue_crown:1495333511824146495> Ticket Claimed",
+        title="<:samx_crown:1497645120848396519> Ticket Claimed",
         description="This ticket has been claimed and is now being handled.",
         color=0x3498db,
     )
-    embed.add_field(name="<:bluenewDiscordUser:1495325749597704295> Staff Member", value=ctx.author.mention, inline=True)
+    embed.add_field(name="<:samx_dcuser:1497644961858977912> Staff Member", value=ctx.author.mention, inline=True)
     embed.set_thumbnail(url=ctx.author.display_avatar.url)
     embed.set_footer(text=f"Claimed by {ctx.author} • {ctx.author.id}")
     await ctx.channel.send(embed=embed)
@@ -401,22 +491,22 @@ async def claim_ticket(ctx: commands.Context):
 @bot.command(name="remind")
 async def remind(ctx: commands.Context):
     if not is_ticket_channel(ctx.channel):
-        return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This is not a ticket channel.")
     staff_role = ctx.guild.get_role(TICKET_STAFF_ROLE_ID)
     if staff_role not in ctx.author.roles and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("<:wrong:1495334749663793213> Only staff can send reminders.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Only staff can send reminders.")
 
     data = ticket_data.get(ctx.channel.id, {})
     opener_id = data.get("opener")
     opener = ctx.guild.get_member(opener_id) if opener_id else None
 
     if not opener:
-        return await ctx.send("<:wrong:1495334749663793213> Could not find the ticket opener.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Could not find the ticket opener.")
 
     ticket_url = f"https://discord.com/channels/{ctx.guild.id}/{ctx.channel.id}"
 
     embed = discord.Embed(
-        title="<:blue_clock:1495335105034719374> Ticket Reminder",
+        title="<:samx_blue_clock:1497645234530550002> Ticket Reminder",
         description=f"Hey {opener.mention}, you have an open ticket waiting for your response!",
         color=0x3498db,
     )
@@ -426,56 +516,56 @@ async def remind(ctx: commands.Context):
     embed.set_footer(text="Please respond as soon as possible.")
 
     view = discord.ui.View()
-    view.add_item(discord.ui.Button(label="Go to Ticket", url=ticket_url, emoji="<:blue_clock:1495335105034719374>"))
+    view.add_item(discord.ui.Button(label="Go to Ticket", url=ticket_url, emoji="<:samx_blue_clock:1497645234530550002>"))
 
     try:
         await opener.send(embed=embed, view=view)
         await ctx.message.delete()
-        await ctx.channel.send(f"<:blue_tick:1495334689983037504> Reminder sent to {opener.mention}.", delete_after=5)
+        await ctx.channel.send(f"<:samx_tick:1497645191463440605> Reminder sent to {opener.mention}.", delete_after=5)
     except discord.Forbidden:
-        await ctx.send("<:wrong:1495334749663793213> Could not DM the ticket opener — they may have DMs disabled.")
+        await ctx.send("<:samx_wrong:1497645159037276171> Could not DM the ticket opener — they may have DMs disabled.")
 
 # ── Prefix: $add ──────────────────────────────────────────────────────────────
 
 @bot.command(name="add")
 async def add_user(ctx: commands.Context, user: discord.Member):
     if not is_ticket_channel(ctx.channel):
-        return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This is not a ticket channel.")
     staff_role = ctx.guild.get_role(TICKET_STAFF_ROLE_ID)
     if staff_role not in ctx.author.roles and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("<:wrong:1495334749663793213> Only staff can add users.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Only staff can add users.")
 
     await ctx.channel.set_permissions(user, view_channel=True, send_messages=True, read_message_history=True)
     ticket_data.setdefault(ctx.channel.id, {}).setdefault("added_users", set()).add(user.id)
     save_ticket_data()
-    await ctx.send(f"<:blue_tick:1495334689983037504> {user.mention} has been added to the ticket.")
+    await ctx.send(f"<:samx_tick:1497645191463440605> {user.mention} has been added to the ticket.")
 
 # ── Prefix: $remove ───────────────────────────────────────────────────────────
 
 @bot.command(name="remove")
 async def remove_user(ctx: commands.Context, user: discord.Member):
     if not is_ticket_channel(ctx.channel):
-        return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This is not a ticket channel.")
     staff_role = ctx.guild.get_role(TICKET_STAFF_ROLE_ID)
     if staff_role not in ctx.author.roles and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("<:wrong:1495334749663793213> Only staff can remove users.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Only staff can remove users.")
 
     await ctx.channel.set_permissions(user, overwrite=None)
     ticket_data.get(ctx.channel.id, {}).get("added_users", set()).discard(user.id)
     save_ticket_data()
-    await ctx.send(f"<:blue_tick:1495334689983037504> {user.mention} has been removed from the ticket.")
+    await ctx.send(f"<:samx_tick:1497645191463440605> {user.mention} has been removed from the ticket.")
 
 # ── Prefix: $close ────────────────────────────────────────────────────────────
 
 @bot.command(name="close", aliases=["cl", "Cl"])
 async def close_ticket(ctx: commands.Context):
     if not is_ticket_channel(ctx.channel):
-        return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This is not a ticket channel.")
     staff_role = ctx.guild.get_role(TICKET_STAFF_ROLE_ID)
     if staff_role not in ctx.author.roles and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("<:wrong:1495334749663793213> Only staff can close tickets.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Only staff can close tickets.")
     if ctx.channel.name.startswith("closed-"):
-        return await ctx.send("<:wrong:1495334749663793213> This ticket is already closed.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This ticket is already closed.")
 
     await ctx.message.delete()
     await _close_ticket(ctx.channel, ctx.guild)
@@ -485,19 +575,19 @@ async def close_ticket(ctx: commands.Context):
 @bot.command(name="close.v", aliases=["cv", "Cv"])
 async def close_vouch(ctx: commands.Context):
     if not is_ticket_channel(ctx.channel):
-        return await ctx.send("<:wrong:1495334749663793213> This is not a ticket channel.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This is not a ticket channel.")
     staff_role = ctx.guild.get_role(TICKET_STAFF_ROLE_ID)
     if staff_role not in ctx.author.roles and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("<:wrong:1495334749663793213> Only staff can close tickets.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> Only staff can close tickets.")
     if ctx.channel.name.startswith("closed-"):
-        return await ctx.send("<:wrong:1495334749663793213> This ticket is already closed.")
+        return await ctx.send("<:samx_wrong:1497645159037276171> This ticket is already closed.")
 
     data = ticket_data.get(ctx.channel.id, {})
     opener_id = data.get("opener")
     opener = ctx.guild.get_member(opener_id) if opener_id else None
 
     vouch_embed = discord.Embed(
-        title="<:blue_crown:1495333511824146495>  DR!X MARKET VOUCH !",
+        title="<:samx_crown:1497645120848396519>  DR!X MARKET VOUCH !",
         description=(
             f"Thank you {opener.mention if opener else 'valued customer'} for purchasing **{data.get('product', 'your order')}** in our server <:heart:1495338641508270110>\n\n"
             f"Your support helps **{ctx.guild.name}** grow & we would be pleased to serve you again "
@@ -513,7 +603,7 @@ async def close_vouch(ctx: commands.Context):
     vouch_view.add_item(discord.ui.Button(
         label="Vouch Here",
         style=discord.ButtonStyle.link,
-        emoji="<:trust:1495338042364399666>",
+        emoji="<:samx_heart:1497644727238135919>",
         url="https://discordapp.com/channels/1480754399075635292/1488913327575797911",
     ))
 
