@@ -457,12 +457,7 @@ class TicketDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "robux":
-            robux_type_embed = discord.Embed(
-                title="<:samx_ROBLOX:1497644702504321225> Robux Order",
-                description="What type of Robux is it?",
-                color=0x3498db,
-            )
-            await interaction.response.send_message(embed=robux_type_embed, view=RobuxTypeView(), ephemeral=True)
+            await interaction.response.send_modal(RobuxModal())
             await interaction.message.edit(view=TicketPanelView())
         elif self.values[0] == "other":
             await interaction.response.send_modal(OtherModal())
