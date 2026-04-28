@@ -336,11 +336,10 @@ class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
 
 
 class RobuxPaymentSelect(discord.ui.Select):
-    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
+    def __init__(self, robux_type: str, item: str, username: str):
         self.robux_type = robux_type
         self.item = item
         self.username = username
-        self.ephemeral_interaction = ephemeral_interaction
         options = [
             discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
             discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
@@ -351,7 +350,7 @@ class RobuxPaymentSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "other":
             await interaction.response.send_modal(
-                RobuxOtherPaymentModal(self.robux_type, self.item, self.username, self.ephemeral_interaction)
+                RobuxOtherPaymentModal(self.robux_type, self.item, self.username, interaction)
             )
             return
 
@@ -376,24 +375,98 @@ class RobuxPaymentSelect(discord.ui.Select):
 
 
 class RobuxPaymentView(discord.ui.View):
-    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
+    def __init__(self, robux_type: str, item: str, username: str):
         super().__init__(timeout=120)
-        self.add_item(RobuxPaymentSelect(robux_type, item, username, ephemeral_interaction))
+        self.add_item(RobuxPaymentSelect(robux_type, item, username))
 
 class OtherModal(discord.ui.Modal, title="Product Order"):
     product = discord.ui.TextInput(label="What item do you wanna purchase?", placeholder="Ex: 2 Kitsune, YETI", max_length=100)
     username = discord.ui.TextInput(label="Your Roblox username", placeholder="Optional", required=False, max_length=50)
 
     async def on_submit(self, interaction: discord.Interaction):
-        await _create_ticket(
+        embed = discord.Embed(
+            title="<:samx_cart:1497644780539220018> Select Payment Method",
+            description="Select your preferred payment method below.",
+            color=0x3498db,
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=OtherPaymentView(self.product.value, self.username.value or "Not provided", interaction),
+            ephemeral=True,
+        )
+
+
+class OtherPaymentSelect(discord.ui.Select):
+    def __init__(self, product: str, username: str, ephemeral_interaction: discord.Interaction):
+        self.product = product
+        self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
+        options = [
+            discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
+            discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
+            discord.SelectOption(label="Other", emoji="<:samx_Paypal:1498268421463474278>", value="other"),
+        ]
+        super().__init__(placeholder="Select your preferred payment method", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.values[0] == "other":
+            await interaction.response.send_modal(
+                OtherPaymentModal(self.product, self.username, self.ephemeral_interaction)
+            )
+            return
+
+        payment = self.values[0].capitalize()
+        ticket_channel = await _create_ticket_channel(
             interaction,
             category_id=OTHER_CATEGORY_ID,
-            product=self.product.value,
+            product=self.product,
             details_desc=(
-                f"**Item**\n```{self.product.value}```\n"
-                f"**Roblox Username**\n```{self.username.value or 'Not provided'}```"
+                f"**Item**\n```{self.product}```\n"
+                f"**Roblox Username**\n```{self.username}```\n"
+                f"**Payment Method**\n```{payment}```"
             ),
         )
+        done_embed = discord.Embed(
+            title="<:samx_tick:1497645191463440605> Ticket Created",
+            description=f"Your ticket has been created: {ticket_channel.mention}",
+            color=0x2ecc71,
+        )
+        await interaction.response.edit_message(embed=done_embed, view=None)
+
+
+class OtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
+    method = discord.ui.TextInput(label="Payment Method", placeholder="PayPal / Crypto", max_length=50)
+
+    def __init__(self, product: str, username: str, ephemeral_interaction: discord.Interaction):
+        super().__init__()
+        self.product = product
+        self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
+
+    async def on_submit(self, interaction: discord.Interaction):
+        ticket_channel = await _create_ticket_channel(
+            interaction,
+            category_id=OTHER_CATEGORY_ID,
+            product=self.product,
+            details_desc=(
+                f"**Item**\n```{self.product}```\n"
+                f"**Roblox Username**\n```{self.username}```\n"
+                f"**Payment Method**\n```{self.method.value}```"
+            ),
+        )
+        done_embed = discord.Embed(
+            title="<:samx_tick:1497645191463440605> Ticket Created",
+            description=f"Your ticket has been created: {ticket_channel.mention}",
+            color=0x2ecc71,
+        )
+        await interaction.response.defer()
+        await self.ephemeral_interaction.edit_original_response(embed=done_embed, view=None)
+
+
+class OtherPaymentView(discord.ui.View):
+    def __init__(self, product: str, username: str, ephemeral_interaction: discord.Interaction):
+        super().__init__(timeout=120)
+        self.add_item(OtherPaymentSelect(product, username, ephemeral_interaction))
 
 async def _create_ticket_channel(interaction: discord.Interaction, category_id: int, product: str, details_desc: str) -> discord.TextChannel:
     guild = interaction.guild
