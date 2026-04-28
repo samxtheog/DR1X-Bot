@@ -268,15 +268,16 @@ class RobuxModal(discord.ui.Modal, title="Robux Order"):
         )
         await interaction.response.send_message(
             embed=embed,
-            view=RobuxTypeView(self.item.value, self.username.value or "Not provided"),
+            view=RobuxTypeView(self.item.value, self.username.value or "Not provided", interaction),
             ephemeral=True,
         )
 
 
 class RobuxTypeSelect(discord.ui.Select):
-    def __init__(self, item: str, username: str):
+    def __init__(self, item: str, username: str, ephemeral_interaction: discord.Interaction):
         self.item = item
         self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
         options = [
             discord.SelectOption(label="Group Payout", emoji="<:samx_group:1498268791602151504>", value="group_payout"),
             discord.SelectOption(label="InGame Gifting", emoji="<:samx_roblox:1498268879200194600>", value="ingame_gifting"),
@@ -292,25 +293,25 @@ class RobuxTypeSelect(discord.ui.Select):
         )
         await interaction.response.edit_message(
             embed=embed,
-            view=RobuxPaymentView(robux_type, self.item, self.username),
+            view=RobuxPaymentView(robux_type, self.item, self.username, self.ephemeral_interaction),
         )
 
 
 class RobuxTypeView(discord.ui.View):
-    def __init__(self, item: str, username: str):
+    def __init__(self, item: str, username: str, ephemeral_interaction: discord.Interaction):
         super().__init__(timeout=120)
-        self.add_item(RobuxTypeSelect(item, username))
+        self.add_item(RobuxTypeSelect(item, username, ephemeral_interaction))
 
 
 class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
     method = discord.ui.TextInput(label="Payment Method", placeholder="PayPal / Crypto", max_length=50)
 
-    def __init__(self, robux_type: str, item: str, username: str, original_interaction: discord.Interaction):
+    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
         super().__init__()
         self.robux_type = robux_type
         self.item = item
         self.username = username
-        self.original_interaction = original_interaction
+        self.ephemeral_interaction = ephemeral_interaction
 
     async def on_submit(self, interaction: discord.Interaction):
         ticket_channel = await _create_ticket_channel(
@@ -329,19 +330,17 @@ class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
             description=f"Your ticket has been created: {ticket_channel.mention}",
             color=0x2ecc71,
         )
-        await interaction.response.send_message(embed=done_embed, ephemeral=True)
-        # Edit the original ephemeral message to show ticket created
-        try:
-            await self.original_interaction.edit_original_response(embed=done_embed, view=None)
-        except Exception:
-            pass
+        # Acknowledge the modal submit silently, then edit the ephemeral embed
+        await interaction.response.defer()
+        await self.ephemeral_interaction.edit_original_response(embed=done_embed, view=None)
 
 
 class RobuxPaymentSelect(discord.ui.Select):
-    def __init__(self, robux_type: str, item: str, username: str):
+    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
         self.robux_type = robux_type
         self.item = item
         self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
         options = [
             discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
             discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
@@ -352,7 +351,7 @@ class RobuxPaymentSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "other":
             await interaction.response.send_modal(
-                RobuxOtherPaymentModal(self.robux_type, self.item, self.username, interaction)
+                RobuxOtherPaymentModal(self.robux_type, self.item, self.username, self.ephemeral_interaction)
             )
             return
 
@@ -377,9 +376,9 @@ class RobuxPaymentSelect(discord.ui.Select):
 
 
 class RobuxPaymentView(discord.ui.View):
-    def __init__(self, robux_type: str, item: str, username: str):
+    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
         super().__init__(timeout=120)
-        self.add_item(RobuxPaymentSelect(robux_type, item, username))
+        self.add_item(RobuxPaymentSelect(robux_type, item, username, ephemeral_interaction))
 
 class OtherModal(discord.ui.Modal, title="Product Order"):
     product = discord.ui.TextInput(label="What item do you wanna purchase?", placeholder="Ex: 2 Kitsune, YETI", max_length=100)
