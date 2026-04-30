@@ -275,14 +275,14 @@ class RobuxModal(discord.ui.Modal, title="Robux Order"):
 
 class RobuxTypeSelect(discord.ui.Select):
     def __init__(self, item: str, username: str, ephemeral_interaction: discord.Interaction):
-        self.item = item
-        self.username = username
-        self.ephemeral_interaction = ephemeral_interaction
         options = [
             discord.SelectOption(label="Group Payout", emoji="<:samx_group:1498268791602151504>", value="group_payout"),
             discord.SelectOption(label="InGame Gifting", emoji="<:samx_roblox:1498268879200194600>", value="ingame_gifting"),
         ]
         super().__init__(placeholder="What type of Robux is it?", min_values=1, max_values=1, options=options)
+        self.item = item
+        self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
 
     async def callback(self, interaction: discord.Interaction):
         robux_type = "Group Payout" if self.values[0] == "group_payout" else "InGame Gifting"
@@ -336,16 +336,17 @@ class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
 
 
 class RobuxPaymentSelect(discord.ui.Select):
-    def __init__(self, robux_type: str, item: str, username: str):
-        self.robux_type = robux_type
-        self.item = item
-        self.username = username
+    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
         options = [
             discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
             discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
             discord.SelectOption(label="Other", emoji="<:samx_Paypal:1498268421463474278>", value="other"),
         ]
         super().__init__(placeholder="Select your preferred payment method", min_values=1, max_values=1, options=options)
+        self.robux_type = robux_type
+        self.item = item
+        self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "other":
@@ -375,9 +376,9 @@ class RobuxPaymentSelect(discord.ui.Select):
 
 
 class RobuxPaymentView(discord.ui.View):
-    def __init__(self, robux_type: str, item: str, username: str):
+    def __init__(self, robux_type: str, item: str, username: str, ephemeral_interaction: discord.Interaction):
         super().__init__(timeout=120)
-        self.add_item(RobuxPaymentSelect(robux_type, item, username))
+        self.add_item(RobuxPaymentSelect(robux_type, item, username, ephemeral_interaction))
 
 class OtherModal(discord.ui.Modal, title="Product Order"):
     product = discord.ui.TextInput(label="What item do you wanna purchase?", placeholder="Ex: 2 Kitsune, YETI", max_length=100)
@@ -398,15 +399,15 @@ class OtherModal(discord.ui.Modal, title="Product Order"):
 
 class OtherPaymentSelect(discord.ui.Select):
     def __init__(self, product: str, username: str, ephemeral_interaction: discord.Interaction):
-        self.product = product
-        self.username = username
-        self.ephemeral_interaction = ephemeral_interaction
         options = [
             discord.SelectOption(label="Esewa", emoji="<:samx_esewa:1497644658162139297>", value="esewa"),
             discord.SelectOption(label="Khalti", emoji="<:samx_khalti:1498268381139177513>", value="khalti"),
             discord.SelectOption(label="Other", emoji="<:samx_Paypal:1498268421463474278>", value="other"),
         ]
         super().__init__(placeholder="Select your preferred payment method", min_values=1, max_values=1, options=options)
+        self.product = product
+        self.username = username
+        self.ephemeral_interaction = ephemeral_interaction
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "other":
