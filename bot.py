@@ -755,7 +755,10 @@ def save_vouch_count(count: int):
     app_commands.Choice(name="⭐⭐⭐⭐⭐", value=5),
 ])
 async def vouch_cmd(interaction: discord.Interaction, product: str, rating: int, message: str):
-    await interaction.response.defer(ephemeral=True)
+    try:
+        await interaction.response.defer(ephemeral=True)
+    except discord.HTTPException:
+        return
 
     count = load_vouch_count() + 1
     save_vouch_count(count)
