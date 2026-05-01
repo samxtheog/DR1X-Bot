@@ -18,6 +18,8 @@ TICKET_STAFF_ROLE_ID = int(os.getenv("TICKET_STAFF_ROLE_ID"))
 ROBUX_CATEGORY_ID = int(os.getenv("ROBUX_CATEGORY_ID"))
 OTHER_CATEGORY_ID = int(os.getenv("OTHER_CATEGORY_ID"))
 TRANSCRIPT_CHANNEL_ID = int(os.getenv("TRANSCRIPT_CHANNEL_ID"))
+VOUCH_PUBLIC_CHANNEL_ID = int(os.getenv("VOUCH_PUBLIC_CHANNEL_ID", "1488913327575797911"))
+VOUCH_PRIVATE_CHANNEL_ID = int(os.getenv("VOUCH_PRIVATE_CHANNEL_ID", "1480755280315945121"))
 KEEP_ALIVE_URL = os.getenv("KEEP_ALIVE_URL", "http://localhost:8080")
 
 # ── Keep-alive server ──────────────────────────────────────────────────────────
@@ -319,9 +321,9 @@ class RobuxOtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
             category_id=ROBUX_CATEGORY_ID,
             product=f"Robux - {self.robux_type}",
             details_desc=(
-                f"**Item**\n```{self.item}```\n"
-                f"**Roblox Username**\n```{self.username}```\n"
-                f"**Robux Type**\n```{self.robux_type}```\n"
+                f"**Item**\n```{self.item}```\n\n"
+                f"**Roblox Username**\n```{self.username}```\n\n"
+                f"**Robux Type**\n```{self.robux_type}```\n\n"
                 f"**Payment Method**\n```{self.method.value}```"
             ),
         )
@@ -361,9 +363,9 @@ class RobuxPaymentSelect(discord.ui.Select):
             category_id=ROBUX_CATEGORY_ID,
             product=f"Robux - {self.robux_type}",
             details_desc=(
-                f"**Item**\n```{self.item}```\n"
-                f"**Roblox Username**\n```{self.username}```\n"
-                f"**Robux Type**\n```{self.robux_type}```\n"
+                f"**Item**\n```{self.item}```\n\n"
+                f"**Roblox Username**\n```{self.username}```\n\n"
+                f"**Robux Type**\n```{self.robux_type}```\n\n"
                 f"**Payment Method**\n```{payment}```"
             ),
         )
@@ -422,8 +424,8 @@ class OtherPaymentSelect(discord.ui.Select):
             category_id=OTHER_CATEGORY_ID,
             product=self.product,
             details_desc=(
-                f"**Item**\n```{self.product}```\n"
-                f"**Roblox Username**\n```{self.username}```\n"
+                f"**Item**\n```{self.product}```\n\n"
+                f"**Roblox Username**\n```{self.username}```\n\n"
                 f"**Payment Method**\n```{payment}```"
             ),
         )
@@ -450,8 +452,8 @@ class OtherPaymentModal(discord.ui.Modal, title="Custom Payment Method"):
             category_id=OTHER_CATEGORY_ID,
             product=self.product,
             details_desc=(
-                f"**Item**\n```{self.product}```\n"
-                f"**Roblox Username**\n```{self.username}```\n"
+                f"**Item**\n```{self.product}```\n\n"
+                f"**Roblox Username**\n```{self.username}```\n\n"
                 f"**Payment Method**\n```{self.method.value}```"
             ),
         )
@@ -504,7 +506,12 @@ async def _create_ticket_channel(interaction: discord.Interaction, category_id: 
     welcome_embed.set_footer(text=f"Ticket by {interaction.user} • {interaction.user.id}")
 
     details_embed = discord.Embed(title="<:samx_product:1497644984894226563> Order Details", color=0x3498db)
-    details_embed.description = details_desc
+    for line in details_desc.split("\n\n"):
+        parts = line.split("\n", 1)
+        if len(parts) == 2:
+            details_embed.add_field(name=parts[0], value=parts[1], inline=True)
+        else:
+            details_embed.add_field(name=parts[0], value="\u200b", inline=True)
 
     mentions = f"{interaction.user.mention} {staff_role.mention if staff_role else ''}"
     await ticket_channel.send(mentions, embeds=[welcome_embed, details_embed], view=TicketActionView())
@@ -717,6 +724,85 @@ async def close_vouch(ctx: commands.Context):
     content = f"{opener.mention}"
     await ctx.message.delete()
     await _close_ticket(ctx.channel, ctx.guild, vouch_embed=vouch_embed, vouch_view=vouch_view)
+
+# ── Vouch counter ──────────────────────────────────────────────────────────────
+
+VOUCH_COUNT_FILE = "vouch_count.json"
+
+def load_vouch_count() -> int:
+    if os.path.exists(VOUCH_COUNT_FILE):
+        with open(VOUCH_COUNT_FILE) as f:
+            return json.load(f).get("count", 0)
+    return 0
+
+def save_vouch_count(count: int):
+    with open(VOUCH_COUNT_FILE, "w") as f:
+        json.dump({"count": count}, f)
+
+# ── Slash: /vouch ──────────────────────────────────────────────────────────────
+
+@bot.tree.command(name="vouch", description="Leave a vouch for DR!X Market")
+@app_commands.describe(
+    product="What did you purchase?",
+    rating="Your rating (1-5)",
+    message="Your vouch message",
+)
+@app_commands.choices(rating=[
+    app_commands.Choice(name="⭐ 1", value=1),
+    app_commands.Choice(name="⭐⭐ 2", value=2),
+    app_commands.Choice(name="⭐⭐⭐ 3", value=3),
+    app_commands.Choice(name="⭐⭐⭐⭐ 4", value=4),
+    app_commands.Choice(name="⭐⭐⭐⭐⭐ 5", value=5),
+])
+async def vouch_cmd(interaction: discord.Interaction, product: str, rating: int, message: str):
+    count = load_vouch_count() + 1
+    save_vouch_count(count)
+
+    stars = "<:STAR:1499633793256915064>" * rating
+    now = discord.utils.utcnow()
+    date_str = now.strftime("%d %b %Y • %H:%M UTC")
+
+    # ── Public embed (no username) ──
+    public_embed = discord.Embed(
+        description="## DR!X MARKET VOUCH <a:HEHE:1495448735126126663>",
+        color=0x66FF00,
+    )
+    public_embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1495100726689534283/1499634513649598464/image.png")
+    public_embed.add_field(name="<a:GIFT:1492772709703094459> PRODUCT", value=message, inline=False)
+    public_embed.add_field(name="<:KK:1499639054520684684> RATING:", value=stars, inline=True)
+    public_embed.add_field(name="<:GG:1499639170308509848> Vouch Nº:", value=f"`#{count}`", inline=True)
+    public_embed.add_field(name=":timer: Vouched at:", value=date_str, inline=True)
+    public_embed.set_image(url="https://cdn.discordapp.com/attachments/1499216815371325620/1499656918061420595/standard.gif")
+    public_embed.set_footer(
+        text="Powered by Drix Market • Automated Service",
+        icon_url="https://cdn.discordapp.com/emojis/1390928021564817538.webp?size=32",
+    )
+
+    # ── Private log embed (with username) ──
+    private_embed = discord.Embed(
+        title="📋 Vouch Log",
+        color=0x66FF00,
+        timestamp=now,
+    )
+    private_embed.add_field(name="User", value=f"{interaction.user.mention} (`{interaction.user}` • {interaction.user.id})", inline=False)
+    private_embed.add_field(name="Product", value=f"```{product}```", inline=False)
+    private_embed.add_field(name="Rating", value=stars, inline=True)
+    private_embed.add_field(name="Vouch #", value=f"`#{count}`", inline=True)
+    private_embed.add_field(name="Message", value=f"```{message}```", inline=False)
+    private_embed.set_footer(text=f"Vouch #{count} • {date_str}")
+
+    public_channel = interaction.guild.get_channel(VOUCH_PUBLIC_CHANNEL_ID)
+    private_channel = interaction.guild.get_channel(VOUCH_PRIVATE_CHANNEL_ID)
+
+    if public_channel:
+        await public_channel.send(embed=public_embed)
+    if private_channel:
+        await private_channel.send(embed=private_embed)
+
+    await interaction.response.send_message(
+        f"<:samx_tick:1497645191463440605> Your vouch has been submitted! Thank you <:samx_heart:1497644727238135919>",
+        ephemeral=True,
+    )
 
 # ── Bot events ─────────────────────────────────────────────────────────────────
 
