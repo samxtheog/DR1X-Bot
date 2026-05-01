@@ -773,7 +773,8 @@ async def vouch_cmd(interaction: discord.Interaction, product: str, rating: int,
     public_embed.add_field(name="<a:GIFT:1492772709703094459> PRODUCT", value=message, inline=False)
     public_embed.add_field(name="<:KK:1499639054520684684> RATING:", value=stars, inline=True)
     public_embed.add_field(name="<:GG:1499639170308509848> Vouch Nº:", value=f"`#{count}`", inline=True)
-    public_embed.add_field(name=":timer: Vouched at:", value=date_str, inline=True)
+    public_embed.add_field(name="\u200b", value="\u200b", inline=True)
+    public_embed.add_field(name=":timer: Vouched at:", value=date_str, inline=False)
     public_embed.set_image(url="https://cdn.discordapp.com/attachments/1499216815371325620/1499656918061420595/standard.gif")
     public_embed.set_footer(
         text="Powered by Drix Market • Automated Service",
