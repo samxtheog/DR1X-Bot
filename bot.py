@@ -748,13 +748,15 @@ def save_vouch_count(count: int):
     message="Your vouch message",
 )
 @app_commands.choices(rating=[
-    app_commands.Choice(name="⭐ 1", value=1),
-    app_commands.Choice(name="⭐⭐ 2", value=2),
-    app_commands.Choice(name="⭐⭐⭐ 3", value=3),
-    app_commands.Choice(name="⭐⭐⭐⭐ 4", value=4),
-    app_commands.Choice(name="⭐⭐⭐⭐⭐ 5", value=5),
+    app_commands.Choice(name="⭐", value=1),
+    app_commands.Choice(name="⭐⭐", value=2),
+    app_commands.Choice(name="⭐⭐⭐", value=3),
+    app_commands.Choice(name="⭐⭐⭐⭐", value=4),
+    app_commands.Choice(name="⭐⭐⭐⭐⭐", value=5),
 ])
 async def vouch_cmd(interaction: discord.Interaction, product: str, rating: int, message: str):
+    await interaction.response.defer(ephemeral=True)
+
     count = load_vouch_count() + 1
     save_vouch_count(count)
 
@@ -799,7 +801,7 @@ async def vouch_cmd(interaction: discord.Interaction, product: str, rating: int,
     if private_channel:
         await private_channel.send(embed=private_embed)
 
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f"<:samx_tick:1497645191463440605> Your vouch has been submitted! Thank you <:samx_heart:1497644727238135919>",
         ephemeral=True,
     )
